@@ -10,21 +10,23 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 @app.route('/', methods=['POST'])
 def webhook():
     data = request.get_json()
-
     if "message" in data and "text" in data["message"]:
-        chat_id = data["message"]["chat"]["id"]
-        text = data["message"]["text"]
- if text == "/price":
+    chat_id = data["message"]["chat"]["id"]
+    text = data["message"]["text"]
+
+    if text == "/price":
         btc = get_price("bitcoin")
         eth = get_price("ethereum")
         reply_text = f"{btc}\n{eth}"
     else:
-        reply_text = f"니안 봇이 받았어! 너가 보낸 메시지: {text}"
-        requests.post(
-            f"{TELEGRAM_API_URL}/sendMessage",
-            json={"chat_id": chat_id, "text": reply_text}
-        )
+        reply_text = f"니안 봇이 받았어! 네가 보낸 메시지: {text}"
+
+    requests.post(
+        f"{TELEGRAM_API_URL}/sendMessage",
+        json={"chat_id": chat_id, "text": reply_text}
+    )
     return "ok", 200
+
 
 @app.route('/', methods=['GET'])
 def index():
