@@ -8,14 +8,17 @@ app = Flask(__name__)
 BOT_TOKEN = '7921739120:AAFD5LF8WunXJM96TuBETt6QDuF3bZ0_eWw'
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-# 가격 조회 함수
+# 가격 조회 함수 (예외 처리 추가)
 def get_price(symbol="bitcoin"):
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd&include_24hr_change=true"
-    response = requests.get(url)
-    data = response.json()
-    price = data[symbol]["usd"]
-    change = data[symbol]["usd_24h_change"]
-    return f"{symbol.upper()} 현재가: ${price:,.2f} (24h: {change:+.2f}%)"
+    try:
+        url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd&include_24hr_change=true"
+        response = requests.get(url, timeout=5)
+        data = response.json()
+        price = data[symbol]["usd"]
+        change = data[symbol]["usd_24h_change"]
+        return f"{symbol.upper()} 현재가: ${price:,.2f} (24h: {change:+.2f}%)"
+    except Exception as e:
+        return f"{symbol.upper()} 가격 조회 실패: {e}"
 
 # 텔레그램 웹훅 처리
 @app.route('/', methods=['POST'])
@@ -24,15 +27,17 @@ def webhook():
 
     if "message" in data and "text" in data["message"]:
         chat_id = data["message"]["chat"]["id"]
-        text = data["message"]["text"]
+        text = data["message"]["text"].strip()
 
-        if text.strip() == "/price":
+        # /price 명령어 인식 개선 (띄어쓰기 대응)
+        if text.lower().startswith("/price"):
             btc = get_price("bitcoin")
             eth = get_price("ethereum")
             reply_text = f"{btc}\n{eth}"
         else:
             reply_text = f"니안 봇이 받았어! 네가 보낸 메시지: {text}"
 
+        # 응답 전송
         requests.post(
             f"{TELEGRAM_API_URL}/sendMessage",
             json={"chat_id": chat_id, "text": reply_text}
